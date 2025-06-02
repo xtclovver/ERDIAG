@@ -1,166 +1,333 @@
-// Менеджер для работы с файлами
+// Менеджер для работы с файлами и базой данных
 class FileManager {
     constructor(app) {
         this.app = app;
         this.currentFilePath = null;
+        this.currentDiagramId = null;
+        this.autoSaveInterval = null;
+        
+        this.startAutoSave();
     }
 
-    async saveAs() {
+    // Сохранение в базу данных
+    async saveToDB(options = {}) {
         try {
             const diagramData = this.app.getDiagramData();
             const { ipcRenderer } = require('electron');
             
-            const result = await ipcRenderer.invoke('save-diagram-dialog', diagramData);
+            const saveOptions = {
+                id: this.currentDiagramId,
+                name: options.name || 'Новая диаграмма',
+                description: options.description || '',
+                tags: options.tags || [],
+                thumbnail: await this.generateThumbnail(),
+                ...options
+            };
+
+            const result = await ipcRenderer.invoke('save-diagram-to-db', diagramData, saveOptions);
             
             if (result.success) {
-                this.currentFilePath = result.filePath;
-                this.app.currentFilePath = result.filePath;
+                this.currentDiagramId = result.id;
                 this.app.isDirty = false;
-                this.app.showNotification('Диаграмма сохранена успешно', 'success');
+                this.app.showNotification('Диаграмма сохранена в базу данных', 'success');
                 this.updateWindowTitle();
-            } else if (!result.canceled) {
-                this.app.showNotification('Ошибка при сохранении: ' + result.error, 'error');
+                return result;
             }
         } catch (error) {
-            console.error('Ошибка при сохранении:', error);
-            this.app.showNotification('Ошибка при сохранении файла', 'error');
+            console.error('Ошибка при сохранении в БД:', error);
+            this.app.showNotification('Ошибка при сохранении в базу данных', 'error');
+            throw error;
         }
     }
 
-    async save(filePath = null) {
-        if (!filePath && !this.currentFilePath) {
-            return this.saveAs();
-        }
-
+    // Загрузка из базы данных
+    async loadFromDB(diagramId) {
         try {
-            const diagramData = this.app.getDiagramData();
+            const { ipcRenderer } = require('electron');
+            const diagram = await ipcRenderer.invoke('load-diagram-from-db', diagramId);
+            
+            if (diagram) {
+                // Проверяем, есть ли несохраненные изменения
+                if (this.app.isDirty) {
+                    const result = confirm('У вас есть несохраненные изменения. Продолжить загрузку?');
+                    if (!result) return;
+                }
+
+                // Очищаем текущую диаграмму
+                this.app.canvas.clear();
+                this.app.tables.clear();
+                this.app.relations.clear();
+
+                // Загружаем новые данные
+                this.app.loadDiagramData(diagram.data);
+                this.currentDiagramId = diagram.id;
+                this.currentFilePath = null;
+                
+                this.app.showNotification('Диаграмма загружена из базы данных', 'success');
+                this.updateWindowTitle(diagram.name);
+                return diagram;
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке из БД:', error);
+            this.app.showNotification('Ошибка при загрузке из базы данных', 'error');
+            throw error;
+        }
+    }
+
+    // Получение всех диаграмм
+    async getAllDiagrams() {
+        try {
+            const { ipcRenderer } = require('electron');
+            return await ipcRenderer.invoke('get-all-diagrams');
+        } catch (error) {
+            console.error('Ошибка при получении диаграмм:', error);
+            throw error;
+        }
+    }
+
+    // Удаление диаграммы
+    async deleteDiagram(diagramId) {
+        try {
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('delete-diagram', diagramId);
+            
+            if (result.success) {
+                this.app.showNotification('Диаграмма удалена', 'success');
+                
+                // Если удаляем текущую диаграмму, создаем новую
+                if (this.currentDiagramId === diagramId) {
+                    this.newDiagram();
+                }
+            }
+            return result;
+        } catch (error) {
+            console.error('Ошибка при удалении диаграммы:', error);
+            this.app.showNotification('Ошибка при удалении диаграммы', 'error');
+            throw error;
+        }
+    }
+
+    // Поиск диаграмм
+    async searchDiagrams(query, options = {}) {
+        try {
+            const { ipcRenderer } = require('electron');
+            return await ipcRenderer.invoke('search-diagrams', query, options);
+        } catch (error) {
+            console.error('Ошибка при поиске диаграмм:', error);
+            throw error;
+        }
+    }
+
+    // Экспорт в файл
+    async exportToFile() {
+        try {
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('show-save-dialog', {
+                filters: [
+                    { name: 'ER Диаграммы', extensions: ['erdiag'] },
+                    { name: 'JSON файлы', extensions: ['json'] }
+                ],
+                defaultPath: 'diagram.erdiag'
+            });
+
+            if (!result.canceled) {
+                const diagramData = this.app.getDiagramData();
+                const exportData = {
+                    version: '1.0',
+                    exportedAt: new Date().toISOString(),
+                    diagram: {
+                        name: 'Экспортированная диаграмма',
+                        data: diagramData
+                    }
+                };
+
+                const fs = require('fs');
+                fs.writeFileSync(result.filePath, JSON.stringify(exportData, null, 2));
+                
+                this.app.showNotification('Диаграмма экспортирована в файл', 'success');
+                return { success: true, filePath: result.filePath };
+            }
+        } catch (error) {
+            console.error('Ошибка при экспорте в файл:', error);
+            this.app.showNotification('Ошибка при экспорте в файл', 'error');
+            throw error;
+        }
+    }
+
+    // Импорт из файла
+    async importFromFile(fileData) {
+        try {
             const { ipcRenderer } = require('electron');
             
-            // Если путь не указан, используем текущий
-            const targetPath = filePath || this.currentFilePath;
-            
-            // Сохраняем напрямую в файл
-            const fs = require('fs');
-            fs.writeFileSync(targetPath, JSON.stringify(diagramData, null, 2));
-            
-            this.currentFilePath = targetPath;
-            this.app.currentFilePath = targetPath;
-            this.app.isDirty = false;
-            this.app.showNotification('Диаграмма сохранена', 'success');
-            this.updateWindowTitle();
-        } catch (error) {
-            console.error('Ошибка при сохранении:', error);
-            this.app.showNotification('Ошибка при сохранении файла', 'error');
-        }
-    }
-
-    load(data) {
-        try {
-            // Проверяем, есть ли несохраненные изменения
-            if (this.app.isDirty) {
-                const result = confirm('У вас есть несохраненные изменения. Продолжить загрузку?');
-                if (!result) return;
+            // Проверяем формат данных
+            let importData;
+            if (fileData.version && fileData.diagram) {
+                // Новый формат с метаданными
+                importData = fileData;
+            } else {
+                // Старый формат - просто данные диаграммы
+                importData = {
+                    version: '1.0',
+                    diagram: {
+                        name: 'Импортированная диаграмма',
+                        data: fileData
+                    }
+                };
             }
 
-            // Очищаем текущую диаграмму
-            this.app.canvas.clear();
-            this.app.tables.clear();
-            this.app.relations.clear();
-
-            // Загружаем новые данные
-            this.app.loadDiagramData(data);
+            const result = await ipcRenderer.invoke('import-diagram', importData, { generateNewId: true });
             
-            this.app.showNotification('Диаграмма загружена успешно', 'success');
-            this.updateWindowTitle();
+            if (result.success) {
+                this.app.showNotification('Диаграмма импортирована в базу данных', 'success');
+                return result;
+            }
         } catch (error) {
-            console.error('Ошибка при загрузке:', error);
-            this.app.showNotification('Ошибка при загрузке файла', 'error');
+            console.error('Ошибка при импорте из файла:', error);
+            this.app.showNotification('Ошибка при импорте из файла', 'error');
+            throw error;
         }
     }
 
-    async exportPNG() {
+    // Создание новой диаграммы
+    newDiagram() {
+        // Проверяем, есть ли несохраненные изменения
+        if (this.app.isDirty) {
+            const result = confirm('У вас есть несохраненные изменения. Создать новую диаграмму?');
+            if (!result) return;
+        }
+
+        // Очищаем текущую диаграмму
+        this.app.canvas.clear();
+        this.app.tables.clear();
+        this.app.relations.clear();
+        
+        this.currentDiagramId = null;
+        this.currentFilePath = null;
+        this.app.isDirty = false;
+        
+        this.updateWindowTitle();
+        this.app.showNotification('Создана новая диаграмма', 'info');
+    }
+
+    // Генерация миниатюры
+    async generateThumbnail() {
         try {
-            // Создаем временный canvas для экспорта
             const originalBackground = this.app.canvas.backgroundColor;
             this.app.canvas.backgroundColor = '#ffffff';
             
-            // Получаем данные изображения
             const dataURL = this.app.canvas.toDataURL({
                 format: 'png',
-                quality: 1,
-                multiplier: 2 // Увеличиваем разрешение для лучшего качества
+                quality: 0.8,
+                multiplier: 0.5,
+                width: 300,
+                height: 200
             });
 
-            // Восстанавливаем оригинальный фон
             this.app.canvas.backgroundColor = originalBackground;
             this.app.canvas.renderAll();
-
-            const { ipcRenderer } = require('electron');
-            const result = await ipcRenderer.invoke('export-png-dialog', dataURL);
-
-            if (result.success) {
-                this.app.showNotification('Диаграмма экспортирована в PNG', 'success');
-            } else if (!result.canceled) {
-                this.app.showNotification('Ошибка при экспорте: ' + result.error, 'error');
-            }
+            
+            return dataURL;
         } catch (error) {
-            console.error('Ошибка при экспорте:', error);
-            this.app.showNotification('Ошибка при экспорте в PNG', 'error');
+            console.error('Ошибка при создании миниатюры:', error);
+            return null;
         }
     }
 
+    // Экспорт в PNG
+    async exportPNG() {
+        try {
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('show-save-dialog', {
+                filters: [{ name: 'PNG изображения', extensions: ['png'] }],
+                defaultPath: 'diagram.png'
+            });
+
+            if (!result.canceled) {
+                const originalBackground = this.app.canvas.backgroundColor;
+                this.app.canvas.backgroundColor = '#ffffff';
+                
+                const dataURL = this.app.canvas.toDataURL({
+                    format: 'png',
+                    quality: 1,
+                    multiplier: 2
+                });
+
+                this.app.canvas.backgroundColor = originalBackground;
+                this.app.canvas.renderAll();
+
+                const base64Data = dataURL.replace(/^data:image\/png;base64,/, '');
+                const fs = require('fs');
+                fs.writeFileSync(result.filePath, base64Data, 'base64');
+                
+                this.app.showNotification('Диаграмма экспортирована в PNG', 'success');
+                return { success: true, filePath: result.filePath };
+            }
+        } catch (error) {
+            console.error('Ошибка при экспорте в PNG:', error);
+            this.app.showNotification('Ошибка при экспорте в PNG', 'error');
+            throw error;
+        }
+    }
+
+    // Экспорт в SVG
     async exportSVG() {
         try {
-            const svgData = this.app.canvas.toSVG();
-            const blob = new Blob([svgData], { type: 'image/svg+xml' });
-            
-            // Создаем ссылку для скачивания
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'diagram.svg';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('show-save-dialog', {
+                filters: [{ name: 'SVG изображения', extensions: ['svg'] }],
+                defaultPath: 'diagram.svg'
+            });
 
-            this.app.showNotification('Диаграмма экспортирована в SVG', 'success');
+            if (!result.canceled) {
+                const svgData = this.app.canvas.toSVG();
+                const fs = require('fs');
+                fs.writeFileSync(result.filePath, svgData);
+                
+                this.app.showNotification('Диаграмма экспортирована в SVG', 'success');
+                return { success: true, filePath: result.filePath };
+            }
         } catch (error) {
             console.error('Ошибка при экспорте в SVG:', error);
             this.app.showNotification('Ошибка при экспорте в SVG', 'error');
+            throw error;
         }
     }
 
+    // Экспорт в SQL
     async exportSQL() {
         try {
-            const sqlCode = this.generateSQL();
-            
-            // Создаем blob с SQL кодом
-            const blob = new Blob([sqlCode], { type: 'text/sql' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'database_schema.sql';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('show-save-dialog', {
+                filters: [{ name: 'SQL файлы', extensions: ['sql'] }],
+                defaultPath: 'database_schema.sql'
+            });
 
-            this.app.showNotification('SQL схема экспортирована', 'success');
+            if (!result.canceled) {
+                const sqlCode = this.generateSQL();
+                const fs = require('fs');
+                fs.writeFileSync(result.filePath, sqlCode);
+                
+                this.app.showNotification('SQL схема экспортирована', 'success');
+                return { success: true, filePath: result.filePath };
+            }
         } catch (error) {
             console.error('Ошибка при экспорте SQL:', error);
             this.app.showNotification('Ошибка при экспорте SQL', 'error');
+            throw error;
         }
     }
 
+    // Генерация SQL кода
     generateSQL() {
         let sql = '-- Сгенерированная SQL схема\n';
         sql += '-- Создано: ' + new Date().toLocaleString() + '\n\n';
 
         // Создаем таблицы
         this.app.tables.forEach((table, tableId) => {
-            sql += `-- Таблица: ${table.name}\n`;
-            sql += `CREATE TABLE ${this.sanitizeTableName(table.name)} (\n`;
+            if (!table.fields || table.fields.length === 0) return;
+
+            sql += `-- Таблица: ${table.tableName || 'Unnamed'}\n`;
+            sql += `CREATE TABLE ${this.sanitizeTableName(table.tableName || 'unnamed_table')} (\n`;
             
             const fieldDefinitions = table.fields.map(field => {
                 let definition = `    ${this.sanitizeFieldName(field.name)} ${field.type}`;
@@ -169,8 +336,8 @@ class FileManager {
                     definition += ' NOT NULL';
                 }
                 
-                if (field.isAutoIncrement) {
-                    definition += ' AUTO_INCREMENT';
+                if (field.defaultValue) {
+                    definition += ` DEFAULT '${field.defaultValue}'`;
                 }
                 
                 if (field.isUnique) {
@@ -190,19 +357,25 @@ class FileManager {
             }
 
             sql += '\n);\n\n';
+
+            // Добавляем комментарий к таблице
+            if (table.comment) {
+                sql += `COMMENT ON TABLE ${this.sanitizeTableName(table.tableName)} IS '${table.comment}';\n\n`;
+            }
         });
 
         // Добавляем внешние ключи на основе связей
         this.app.relations.forEach((relation, relationId) => {
-            const fromTable = this.app.tables.get(relation.fromTable);
-            const toTable = this.app.tables.get(relation.toTable);
-            
-            if (fromTable && toTable) {
-                sql += `-- Связь: ${relation.name}\n`;
-                sql += `ALTER TABLE ${this.sanitizeTableName(fromTable.name)}\n`;
-                sql += `ADD CONSTRAINT FK_${relation.id}\n`;
-                sql += `FOREIGN KEY (${this.sanitizeFieldName(toTable.name.toLowerCase() + '_id')})\n`;
-                sql += `REFERENCES ${this.sanitizeTableName(toTable.name)}(id);\n\n`;
+            if (relation.fromTable && relation.toTable) {
+                const fromTable = this.app.tables.get(relation.fromTable);
+                const toTable = this.app.tables.get(relation.toTable);
+                
+                if (fromTable && toTable) {
+                    sql += `-- Связь: ${relation.relationName || 'Unnamed relation'}\n`;
+                    sql += `ALTER TABLE ${this.sanitizeTableName(fromTable.tableName)}\n`;
+                    sql += `ADD CONSTRAINT fk_${fromTable.tableName}_${toTable.tableName}\n`;
+                    sql += `FOREIGN KEY (id) REFERENCES ${this.sanitizeTableName(toTable.tableName)}(id);\n\n`;
+                }
             }
         });
 
@@ -217,158 +390,113 @@ class FileManager {
         return name.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
     }
 
-    updateWindowTitle() {
-        const { remote } = require('electron');
-        const window = remote.getCurrentWindow();
-        
+    updateWindowTitle(diagramName = null) {
+        const { ipcRenderer } = require('electron');
         let title = 'ER Diagram Editor';
-        if (this.currentFilePath) {
-            const path = require('path');
-            const fileName = path.basename(this.currentFilePath);
-            title = `${fileName} - ER Diagram Editor`;
+        
+        if (diagramName) {
+            title = `${diagramName} - ${title}`;
+        } else if (this.currentDiagramId) {
+            title = `Диаграмма - ${title}`;
+        } else {
+            title = `Новая диаграмма - ${title}`;
         }
         
         if (this.app.isDirty) {
             title = '• ' + title;
         }
         
-        window.setTitle(title);
+        document.title = title;
     }
 
     // Автосохранение
     startAutoSave() {
-        setInterval(() => {
-            if (this.app.isDirty && this.currentFilePath) {
-                this.createBackup();
+        // Автосохранение каждые 5 минут
+        this.autoSaveInterval = setInterval(() => {
+            if (this.app.isDirty && this.currentDiagramId) {
+                this.saveToDB({ saveHistory: false });
             }
-        }, 300000); // Каждые 5 минут
+        }, 5 * 60 * 1000);
     }
 
-    createBackup() {
+    stopAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
+        }
+    }
+
+    // Получение истории диаграммы
+    async getDiagramHistory(diagramId, limit = 20) {
         try {
-            if (!this.currentFilePath) return;
-            
-            const path = require('path');
-            const fs = require('fs');
-            
-            const backupPath = this.currentFilePath.replace(
-                path.extname(this.currentFilePath),
-                '.backup' + path.extname(this.currentFilePath)
-            );
-            
-            const diagramData = this.app.getDiagramData();
-            fs.writeFileSync(backupPath, JSON.stringify(diagramData, null, 2));
-            
-            console.log('Создана резервная копия:', backupPath);
+            const { ipcRenderer } = require('electron');
+            return await ipcRenderer.invoke('get-diagram-history', diagramId, limit);
+        } catch (error) {
+            console.error('Ошибка при получении истории:', error);
+            throw error;
+        }
+    }
+
+    // Работа с шаблонами
+    async saveAsTemplate(templateData, options = {}) {
+        try {
+            const { ipcRenderer } = require('electron');
+            return await ipcRenderer.invoke('save-template', templateData, options);
+        } catch (error) {
+            console.error('Ошибка при сохранении шаблона:', error);
+            throw error;
+        }
+    }
+
+    async getTemplates(category = null) {
+        try {
+            const { ipcRenderer } = require('electron');
+            return await ipcRenderer.invoke('get-templates', category);
+        } catch (error) {
+            console.error('Ошибка при получении шаблонов:', error);
+            throw error;
+        }
+    }
+
+    // Статистика базы данных
+    async getDBStats() {
+        try {
+            const { ipcRenderer } = require('electron');
+            return await ipcRenderer.invoke('get-db-stats');
+        } catch (error) {
+            console.error('Ошибка при получении статистики:', error);
+            throw error;
+        }
+    }
+
+    // Резервное копирование
+    async backupDatabase() {
+        try {
+            const { ipcRenderer } = require('electron');
+            const result = await ipcRenderer.invoke('show-save-dialog', {
+                filters: [{ name: 'База данных', extensions: ['db'] }],
+                defaultPath: `er-diagrams-backup-${new Date().toISOString().split('T')[0]}.db`
+            });
+
+            if (!result.canceled) {
+                await ipcRenderer.invoke('backup-database', result.filePath);
+                this.app.showNotification('Резервная копия создана', 'success');
+                return { success: true, filePath: result.filePath };
+            }
         } catch (error) {
             console.error('Ошибка при создании резервной копии:', error);
+            this.app.showNotification('Ошибка при создании резервной копии', 'error');
+            throw error;
         }
     }
 
-    // Импорт из различных форматов
-    async importFromJSON(jsonData) {
-        try {
-            const data = JSON.parse(jsonData);
-            this.load(data);
-        } catch (error) {
-            this.app.showNotification('Ошибка при импорте JSON', 'error');
-        }
+    // Очистка при закрытии
+    cleanup() {
+        this.stopAutoSave();
     }
+}
 
-    // Экспорт в различные форматы
-    async exportToJSON() {
-        try {
-            const diagramData = this.app.getDiagramData();
-            const jsonString = JSON.stringify(diagramData, null, 2);
-            
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'diagram.json';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            this.app.showNotification('Диаграмма экспортирована в JSON', 'success');
-        } catch (error) {
-            this.app.showNotification('Ошибка при экспорте JSON', 'error');
-        }
-    }
-
-    // Получение информации о файле
-    getFileInfo() {
-        if (!this.currentFilePath) return null;
-        
-        const fs = require('fs');
-        const path = require('path');
-        
-        try {
-            const stats = fs.statSync(this.currentFilePath);
-            return {
-                path: this.currentFilePath,
-                name: path.basename(this.currentFilePath),
-                size: stats.size,
-                modified: stats.mtime,
-                created: stats.birthtime
-            };
-        } catch (error) {
-            return null;
-        }
-    }
-
-    // Проверка на изменения файла
-    checkFileChanges() {
-        if (!this.currentFilePath) return;
-        
-        const fileInfo = this.getFileInfo();
-        if (fileInfo && this.lastModified && fileInfo.modified > this.lastModified) {
-            const result = confirm('Файл был изменен другой программой. Перезагрузить?');
-            if (result) {
-                this.reloadFile();
-            }
-        }
-    }
-
-    async reloadFile() {
-        if (!this.currentFilePath) return;
-        
-        try {
-            const fs = require('fs');
-            const data = fs.readFileSync(this.currentFilePath, 'utf8');
-            const parsedData = JSON.parse(data);
-            this.load(parsedData);
-        } catch (error) {
-            this.app.showNotification('Ошибка при перезагрузке файла', 'error');
-        }
-    }
-
-    // Очистка временных файлов
-    cleanupTempFiles() {
-        // Удаляем старые резервные копии
-        if (this.currentFilePath) {
-            const path = require('path');
-            const fs = require('fs');
-            
-            try {
-                const backupPath = this.currentFilePath.replace(
-                    path.extname(this.currentFilePath),
-                    '.backup' + path.extname(this.currentFilePath)
-                );
-                
-                if (fs.existsSync(backupPath)) {
-                    const stats = fs.statSync(backupPath);
-                    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                    
-                    if (stats.mtime < dayAgo) {
-                        fs.unlinkSync(backupPath);
-                        console.log('Удалена старая резервная копия');
-                    }
-                }
-            } catch (error) {
-                console.error('Ошибка при очистке временных файлов:', error);
-            }
-        }
-    }
+// Экспорт для использования в других модулях
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FileManager;
 } 

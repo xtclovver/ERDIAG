@@ -121,69 +121,207 @@
     </div>
 
     <!-- Модальные окна -->
+    <!-- Модальное окно библиотеки диаграмм -->
+    <div class="modal" id="diagramLibraryModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Библиотека диаграмм</h3>
+                <button class="modal-close" data-modal="diagramLibraryModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="library-toolbar">
+                    <div class="search-box">
+                        <input type="text" id="diagramSearch" placeholder="Поиск диаграмм...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="library-actions">
+                        <button class="btn btn-primary" id="createNewDiagramBtn">
+                            <i class="fas fa-plus"></i> Новая диаграмма
+                        </button>
+                        <button class="btn btn-secondary" id="importDiagramBtn">
+                            <i class="fas fa-upload"></i> Импорт
+                        </button>
+                    </div>
+                </div>
+                <div class="diagrams-grid" id="diagramsGrid">
+                    <!-- Диаграммы будут загружены динамически -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно сохранения диаграммы -->
+    <div class="modal" id="saveDiagramModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Сохранить диаграмму</h3>
+                <button class="modal-close" data-modal="saveDiagramModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="saveDiagramForm">
+                    <div class="form-group">
+                        <label for="diagramName">Название диаграммы:</label>
+                        <input type="text" id="diagramName" name="name" required placeholder="Введите название диаграммы">
+                    </div>
+                    <div class="form-group">
+                        <label for="diagramDescription">Описание:</label>
+                        <textarea id="diagramDescription" name="description" rows="3" placeholder="Описание диаграммы (необязательно)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="diagramTags">Теги:</label>
+                        <input type="text" id="diagramTags" name="tags" placeholder="Теги через запятую">
+                        <small>Используйте теги для группировки диаграмм</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal="saveDiagramModal">Отмена</button>
+                <button type="submit" form="saveDiagramForm" class="btn btn-primary">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно шаблонов -->
+    <div class="modal" id="templatesModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Шаблоны диаграмм</h3>
+                <button class="modal-close" data-modal="templatesModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="templates-toolbar">
+                    <div class="template-categories">
+                        <button class="category-btn active" data-category="">Все</button>
+                        <button class="category-btn" data-category="system">Системные</button>
+                        <button class="category-btn" data-category="custom">Пользовательские</button>
+                        <button class="category-btn" data-category="ecommerce">E-commerce</button>
+                        <button class="category-btn" data-category="blog">Блог</button>
+                        <button class="category-btn" data-category="crm">CRM</button>
+                    </div>
+                    <button class="btn btn-primary" id="saveAsTemplateBtn">
+                        <i class="fas fa-save"></i> Сохранить как шаблон
+                    </button>
+                </div>
+                <div class="templates-grid" id="templatesGrid">
+                    <!-- Шаблоны будут загружены динамически -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно экспорта -->
+    <div class="modal" id="exportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Экспорт диаграммы</h3>
+                <button class="modal-close" data-modal="exportModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="export-options">
+                    <div class="export-option" data-format="png">
+                        <i class="fas fa-image"></i>
+                        <h4>PNG изображение</h4>
+                        <p>Растровое изображение высокого качества</p>
+                    </div>
+                    <div class="export-option" data-format="svg">
+                        <i class="fas fa-vector-square"></i>
+                        <h4>SVG векторное изображение</h4>
+                        <p>Масштабируемое векторное изображение</p>
+                    </div>
+                    <div class="export-option" data-format="sql">
+                        <i class="fas fa-database"></i>
+                        <h4>SQL схема</h4>
+                        <p>Генерация SQL кода для создания базы данных</p>
+                    </div>
+                    <div class="export-option" data-format="file">
+                        <i class="fas fa-file-export"></i>
+                        <h4>Файл диаграммы</h4>
+                        <p>Экспорт в формате .erdiag для обмена</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Модальное окно добавления поля -->
     <div class="modal" id="fieldModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Добавить поле</h3>
+                <h3>Редактировать поле</h3>
                 <button class="modal-close" data-modal="fieldModal">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>Название поля:</label>
-                    <input type="text" id="fieldName" placeholder="Введите название поля">
-                </div>
-                <div class="form-group">
-                    <label>Тип данных:</label>
-                    <select id="fieldType">
-                        <option value="INT">INT</option>
-                        <option value="VARCHAR(50)">VARCHAR(50)</option>
-                        <option value="VARCHAR(100)">VARCHAR(100)</option>
-                        <option value="VARCHAR(255)">VARCHAR(255)</option>
-                        <option value="TEXT">TEXT</option>
-                        <option value="DATE">DATE</option>
-                        <option value="DATETIME">DATETIME</option>
-                        <option value="DECIMAL">DECIMAL</option>
-                        <option value="BOOLEAN">BOOLEAN</option>
-                        <option value="JSON">JSON</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="isPrimaryKey">
-                        Первичный ключ (PK)
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="isForeignKey">
-                        Внешний ключ (FK)
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="isAutoIncrement">
-                        Автоинкремент
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="isUnique">
-                        Уникальный
-                    </label>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="isNotNull">
-                        Не NULL
-                    </label>
-                </div>
+                <form id="fieldForm">
+                    <div class="form-group">
+                        <label for="fieldName">Название поля:</label>
+                        <input type="text" id="fieldName" name="fieldName" required placeholder="Введите название поля">
+                    </div>
+                    <div class="form-group">
+                        <label for="fieldType">Тип данных:</label>
+                        <select id="fieldType" name="fieldType">
+                            <option value="INT">INT</option>
+                            <option value="BIGINT">BIGINT</option>
+                            <option value="VARCHAR(50)">VARCHAR(50)</option>
+                            <option value="VARCHAR(100)">VARCHAR(100)</option>
+                            <option value="VARCHAR(255)" selected>VARCHAR(255)</option>
+                            <option value="TEXT">TEXT</option>
+                            <option value="LONGTEXT">LONGTEXT</option>
+                            <option value="DATE">DATE</option>
+                            <option value="DATETIME">DATETIME</option>
+                            <option value="TIMESTAMP">TIMESTAMP</option>
+                            <option value="DECIMAL(10,2)">DECIMAL(10,2)</option>
+                            <option value="FLOAT">FLOAT</option>
+                            <option value="DOUBLE">DOUBLE</option>
+                            <option value="BOOLEAN">BOOLEAN</option>
+                            <option value="JSON">JSON</option>
+                            <option value="ENUM">ENUM</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fieldComment">Комментарий:</label>
+                        <textarea id="fieldComment" name="fieldComment" rows="2" placeholder="Описание поля (необязательно)"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="defaultValue">Значение по умолчанию:</label>
+                        <input type="text" id="defaultValue" name="defaultValue" placeholder="Значение по умолчанию">
+                    </div>
+                    <div class="form-group checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isPrimaryKey" name="isPrimaryKey">
+                            <span class="checkmark"></span>
+                            Первичный ключ (PK)
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isForeignKey" name="isForeignKey">
+                            <span class="checkmark"></span>
+                            Внешний ключ (FK)
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isNotNull" name="isNotNull">
+                            <span class="checkmark"></span>
+                            Не NULL
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isUnique" name="isUnique">
+                            <span class="checkmark"></span>
+                            Уникальный
+                        </label>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-modal="fieldModal">Отмена</button>
-                <button class="btn btn-primary" id="addFieldBtn">Добавить</button>
+                <button type="button" class="btn btn-secondary" data-modal="fieldModal">Отмена</button>
+                <button type="submit" form="fieldForm" class="btn btn-primary">Сохранить</button>
             </div>
         </div>
     </div>
