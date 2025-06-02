@@ -1,0 +1,8 @@
+/node_modules
+/dist
+/build
+/release
+/out
+/app.asar.unpacked
+/app.asar
+/app.asar.unpacked
