@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ER Diagram Editor</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Левая панель инструментов -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-database"></i> ER Editor</h2>
+            </div>
+            
+            <div class="tool-section">
+                <h3>Инструменты</h3>
+                <div class="tool-buttons">
+                    <button class="tool-btn active" id="selectTool" data-tool="select">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <span>Выбор</span>
+                    </button>
+                    <button class="tool-btn" id="tableTool" data-tool="table">
+                        <i class="fas fa-table"></i>
+                        <span>Таблица</span>
+                    </button>
+                    <button class="tool-btn" id="relationTool" data-tool="relation">
+                        <i class="fas fa-link"></i>
+                        <span>Связь</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3>Цвета таблиц</h3>
+                <div class="color-palette">
+                    <div class="color-option active" data-color="#4A9EFF" style="background-color: #4A9EFF;"></div>
+                    <div class="color-option" data-color="#FF6B6B" style="background-color: #FF6B6B;"></div>
+                    <div class="color-option" data-color="#4ECDC4" style="background-color: #4ECDC4;"></div>
+                    <div class="color-option" data-color="#45B7D1" style="background-color: #45B7D1;"></div>
+                    <div class="color-option" data-color="#96CEB4" style="background-color: #96CEB4;"></div>
+                    <div class="color-option" data-color="#FFEAA7" style="background-color: #FFEAA7;"></div>
+                    <div class="color-option" data-color="#DDA0DD" style="background-color: #DDA0DD;"></div>
+                    <div class="color-option" data-color="#FFB347" style="background-color: #FFB347;"></div>
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3>Действия</h3>
+                <div class="action-buttons">
+                    <button class="action-btn" id="newBtn">
+                        <i class="fas fa-file"></i>
+                        <span>Новая</span>
+                    </button>
+                    <button class="action-btn" id="saveBtn">
+                        <i class="fas fa-save"></i>
+                        <span>Сохранить</span>
+                    </button>
+                    <button class="action-btn" id="exportBtn">
+                        <i class="fas fa-download"></i>
+                        <span>Экспорт</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="tool-section">
+                <h3>Управление</h3>
+                <div class="control-buttons">
+                    <button class="control-btn" id="zoomInBtn">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="control-btn" id="zoomOutBtn">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="control-btn" id="zoomResetBtn">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="control-btn" id="gridToggle">
+                        <i class="fas fa-th"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Главная рабочая область -->
+        <div class="main-content">
+            <div class="toolbar">
+                <div class="zoom-info">
+                    <span id="zoomLevel">100%</span>
+                </div>
+                <div class="diagram-info">
+                    <span id="diagramStats">Таблиц: 0, Связей: 0</span>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <canvas id="diagramCanvas"></canvas>
+                <div class="grid-overlay" id="gridOverlay"></div>
+            </div>
+        </div>
+
+        <!-- Правая панель свойств -->
+        <div class="properties-panel" id="propertiesPanel">
+            <div class="properties-header">
+                <h3>Свойства</h3>
+                <button class="close-properties" id="closeProperties">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="properties-content" id="propertiesContent">
+                <div class="no-selection">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Выберите объект для редактирования свойств</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна -->
+    <!-- Модальное окно добавления поля -->
+    <div class="modal" id="fieldModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Добавить поле</h3>
+                <button class="modal-close" data-modal="fieldModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Название поля:</label>
+                    <input type="text" id="fieldName" placeholder="Введите название поля">
+                </div>
+                <div class="form-group">
+                    <label>Тип данных:</label>
+                    <select id="fieldType">
+                        <option value="INT">INT</option>
+                        <option value="VARCHAR(50)">VARCHAR(50)</option>
+                        <option value="VARCHAR(100)">VARCHAR(100)</option>
+                        <option value="VARCHAR(255)">VARCHAR(255)</option>
+                        <option value="TEXT">TEXT</option>
+                        <option value="DATE">DATE</option>
+                        <option value="DATETIME">DATETIME</option>
+                        <option value="DECIMAL">DECIMAL</option>
+                        <option value="BOOLEAN">BOOLEAN</option>
+                        <option value="JSON">JSON</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isPrimaryKey">
+                        Первичный ключ (PK)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isForeignKey">
+                        Внешний ключ (FK)
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isAutoIncrement">
+                        Автоинкремент
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isUnique">
+                        Уникальный
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="isNotNull">
+                        Не NULL
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-modal="fieldModal">Отмена</button>
+                <button class="btn btn-primary" id="addFieldBtn">Добавить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Контекстное меню -->
+    <div class="context-menu" id="contextMenu">
+        <div class="context-item" data-action="edit">
+            <i class="fas fa-edit"></i>
+            <span>Редактировать</span>
+        </div>
+        <div class="context-item" data-action="duplicate">
+            <i class="fas fa-copy"></i>
+            <span>Дублировать</span>
+        </div>
+        <div class="context-item" data-action="color">
+            <i class="fas fa-palette"></i>
+            <span>Изменить цвет</span>
+        </div>
+        <div class="context-separator"></div>
+        <div class="context-item" data-action="delete">
+            <i class="fas fa-trash"></i>
+            <span>Удалить</span>
+        </div>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/table-manager.js"></script>
+    <script src="js/relation-manager.js"></script>
+    <script src="js/file-manager.js"></script>
+    <script src="js/ui-manager.js"></script>
+</body>
+</html> 

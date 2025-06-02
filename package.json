@@ -1,0 +1,47 @@
+{
+  "name": "er-diagram-editor",
+  "version": "1.0.0",
+  "description": "ER-диаграмма редактор для проектирования баз данных",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "dist": "electron-builder --publish=never",
+    "pack": "electron-builder --dir"
+  },
+  "keywords": ["electron", "er-diagram", "database", "design"],
+  "author": "ER Diagram Editor",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "dependencies": {
+    "fabric": "^5.3.0"
+  },
+  "build": {
+    "appId": "com.erdiagraeditor.app",
+    "productName": "ER Diagram Editor",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+} 

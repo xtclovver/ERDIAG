@@ -1,0 +1,363 @@
+/* Основные стили приложения */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    overflow: hidden;
+    user-select: none;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Левая панель инструментов */
+.sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
+    border-right: 1px solid #3a3a3a;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #3a3a3a;
+    background: linear-gradient(135deg, #4A9EFF 0%, #357ABD 100%);
+}
+
+.sidebar-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tool-section {
+    padding: 20px;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.tool-section h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #b0b0b0;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Кнопки инструментов */
+.tool-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    position: relative;
+}
+
+.tool-btn:hover {
+    background: rgba(74, 158, 255, 0.1);
+    color: #4A9EFF;
+    transform: translateY(-1px);
+}
+
+.tool-btn.active {
+    background: linear-gradient(135deg, #4A9EFF 0%, #357ABD 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.3);
+}
+
+.tool-btn i {
+    width: 16px;
+    text-align: center;
+}
+
+/* Цветовая палитра */
+.color-palette {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    position: relative;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.color-option.active {
+    border-color: white;
+    transform: scale(1.1);
+}
+
+.color-option.active::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Кнопки действий */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.action-btn:hover {
+    border-color: #4A9EFF;
+    background: linear-gradient(180deg, #404040 0%, #303030 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 158, 255, 0.2);
+}
+
+.action-btn i {
+    width: 16px;
+    text-align: center;
+}
+
+/* Кнопки управления */
+.control-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.control-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #4a4a4a;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.control-btn:hover {
+    border-color: #4A9EFF;
+    background: linear-gradient(180deg, #404040 0%, #303030 100%);
+    transform: translateY(-1px);
+    color: #4A9EFF;
+}
+
+.control-btn.active {
+    background: linear-gradient(135deg, #4A9EFF 0%, #357ABD 100%);
+    border-color: #4A9EFF;
+    color: white;
+}
+
+/* Главная область */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    position: relative;
+}
+
+.toolbar {
+    height: 50px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.zoom-info, .diagram-info {
+    font-size: 14px;
+    color: #b0b0b0;
+    font-weight: 500;
+}
+
+.canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+#diagramCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: crosshair;
+}
+
+/* Сетка */
+.grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 20px 20px;
+    transition: opacity 0.3s ease;
+}
+
+.grid-overlay.hidden {
+    opacity: 0;
+}
+
+/* Правая панель свойств */
+.properties-panel {
+    width: 300px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #252525 100%);
+    border-left: 1px solid #3a3a3a;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.properties-panel.open {
+    transform: translateX(0);
+}
+
+.properties-header {
+    height: 60px;
+    padding: 20px;
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #4A9EFF 0%, #357ABD 100%);
+}
+
+.properties-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+}
+
+.close-properties {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.close-properties:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.properties-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.no-selection {
+    text-align: center;
+    color: #888;
+    margin-top: 50px;
+}
+
+.no-selection i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+/* Скроллбары */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #4a4a4a;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #5a5a5a;
+}
+
+/* Адаптивность */
+@media (max-width: 1200px) {
+    .sidebar {
+        width: 60px;
+    }
+    
+    .sidebar .tool-section h3,
+    .sidebar .tool-btn span,
+    .sidebar .action-btn span {
+        display: none;
+    }
+    
+    .properties-panel {
+        width: 250px;
+    }
+} 
